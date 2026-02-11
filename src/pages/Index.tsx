@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Instagram, X, Github, Play, Pause, Facebook, MessageCircle } from "lucide-react";
+import { Instagram, X, Github, Play, Pause, Facebook, MessageCircle, ExternalLink } from "lucide-react";
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { SPOTIFY_SONGS } from "@/data/spotify-songs";
 
@@ -43,6 +43,7 @@ const Index = () => {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [embedReady, setEmbedReady] = useState(false);
   const [bgImages, setBgImages] = useState({ current: SPOTIFY_SONGS[0].image, prev: '' });
   const [bgReady, setBgReady] = useState(false);
   const [voidText, setVoidText] = useState('');
@@ -73,6 +74,7 @@ const Index = () => {
   const rotationRef = useRef(rotation);
   const pendingAutoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggleBusyRef = useRef(false);
+  const dragDistanceRef = useRef(0);
 
   // Keep refs in sync
   currentSongRef.current = currentSong;
@@ -86,6 +88,11 @@ const Index = () => {
     script.async = true;
     document.body.appendChild(script);
 
+    // Timeout: if embed never initialises (e.g. in-app browser), mark failed
+    const failTimer = setTimeout(() => {
+      if (!controllerRef.current) setEmbedReady(false);
+    }, 5000);
+
     (window as any).onSpotifyIframeApiReady = (IFrameAPI: any) => {
       if (!embedRef.current) return;
       IFrameAPI.createController(embedRef.current, {
@@ -94,6 +101,8 @@ const Index = () => {
         height: 80,
       }, (controller: any) => {
         controllerRef.current = controller;
+        setEmbedReady(true);
+        clearTimeout(failTimer);
         controller.addListener('playback_update', (e: any) => {
           setIsPlaying(!e.data.isPaused);
         });
@@ -101,6 +110,7 @@ const Index = () => {
     };
 
     return () => {
+      clearTimeout(failTimer);
       try { document.body.removeChild(script); } catch {}
       delete (window as any).onSpotifyIframeApiReady;
     };
@@ -134,7 +144,12 @@ const Index = () => {
   }, [currentSong]);
 
   const togglePlay = useCallback(() => {
-    if (!controllerRef.current || toggleBusyRef.current) return;
+    // Fallback: if embed never loaded (in-app browser), open in Spotify
+    if (!controllerRef.current) {
+      window.open(`https://open.spotify.com/track/${SPOTIFY_SONGS[currentSongRef.current].trackId}`, '_blank');
+      return;
+    }
+    if (toggleBusyRef.current) return;
     // Debounce: prevent double-click from toggling twice
     toggleBusyRef.current = true;
     // If there's a pending auto-play (from song change), cancel it — user is taking over
@@ -179,6 +194,7 @@ const Index = () => {
 
   const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
+    dragDistanceRef.current = 0;
     startAngleRef.current = getAngleFromEvent(e);
     startRotationRef.current = rotationRef.current;
   }, [getAngleFromEvent]);
@@ -194,12 +210,22 @@ const Index = () => {
     lastFeedbackIndex.current = -1;
   }, []);
 
+  // ── Tap a song on the rim to jump to it ──
+  const selectSong = useCallback((idx: number) => {
+    const newRot = -idx * SEGMENT;
+    setRotation(newRot);
+    rotationRef.current = newRot;
+    setCurrentSong(idx);
+    triggerFeedback();
+  }, [triggerFeedback]);
+
   useEffect(() => {
     if (!isDragging) return;
 
     const onMove = (e: MouseEvent | TouchEvent) => {
       const angle = getAngleFromEvent(e);
       const diff = angle - startAngleRef.current;
+      dragDistanceRef.current += Math.abs(diff - (rotationRef.current - startRotationRef.current));
       const newRot = startRotationRef.current + diff;
       setRotation(newRot);
       rotationRef.current = newRot;
@@ -425,18 +451,19 @@ const Index = () => {
                 return (
                   <div
                     key={song.trackId}
-                    className={`absolute top-[8px] left-1/2 flex items-center justify-center pointer-events-none
+                    className={`absolute top-[8px] left-1/2 flex items-center justify-center cursor-pointer
                       w-7 h-7 -ml-3.5 sm:w-9 sm:h-9 sm:-ml-[18px]`}
                     style={{
                       transformOrigin: `50% ${wheelRadius - 8}px`,
                       transform: `rotate(${angle}deg)`,
                     }}
+                    onClick={() => { if (!isActive && dragDistanceRef.current < 3) selectSong(i); }}
                   >
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 overflow-hidden ${
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 overflow-hidden pointer-events-none ${
                         isActive
                           ? 'ring-2 ring-foreground shadow-[0_0_12px_rgba(255,255,255,0.2)] scale-110'
-                          : 'ring-1 ring-foreground/10 opacity-35 scale-90'
+                          : 'ring-1 ring-foreground/10 opacity-35 scale-90 hover:opacity-60 hover:scale-100'
                       }`}
                       style={{ transform: `rotate(${-angle - rotation}deg)` }}
                     >
@@ -470,8 +497,13 @@ const Index = () => {
               <div className="absolute inset-0 bg-background/40 group-hover:bg-background/25 transition-colors pointer-events-none" />
 
               {/* Icon */}
-              <div className="relative z-10 flex items-center justify-center pointer-events-none">
-                {isPlaying ? (
+              <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
+                {!embedReady && !controllerRef.current ? (
+                  <>
+                    <ExternalLink size={16} className="text-foreground" />
+                    <span className="text-[6px] font-bold uppercase tracking-wider text-foreground/70 mt-0.5">Open</span>
+                  </>
+                ) : isPlaying ? (
                   <Pause size={20} className="text-foreground" fill="currentColor" />
                 ) : (
                   <Play size={20} className="text-foreground ml-0.5" fill="currentColor" />
