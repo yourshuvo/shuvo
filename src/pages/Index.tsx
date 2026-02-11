@@ -1,4 +1,7 @@
-import { Instagram, Twitter, Github, Music, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Instagram, Twitter, Github, ChevronLeft, ChevronRight, Music } from "lucide-react";
+import { BLOG_POSTS } from "@/data/blog-posts";
+import { SPOTIFY_SONGS } from "@/data/spotify-songs";
 
 // ═══════════════════════════════════════════
 // ✏️  EDIT YOUR INFO HERE
@@ -9,13 +12,6 @@ const PROFILE = {
   bio: "designer · developer · pixel enthusiast",
 };
 
-const LINKS = [
-  { label: "my portfolio", url: "https://yoursite.com", icon: ExternalLink },
-  { label: "blog", url: "https://yourblog.com", icon: ExternalLink },
-  { label: "spotify playlist", url: "https://spotify.com", icon: Music },
-  { label: "cool project", url: "https://github.com", icon: Github },
-];
-
 const SOCIALS = [
   { icon: Instagram, url: "https://instagram.com", label: "Instagram" },
   { icon: Twitter, url: "https://x.com", label: "Twitter / X" },
@@ -25,6 +21,14 @@ const SOCIALS = [
 // ═══════════════════════════════════════════
 
 const Index = () => {
+  const [currentSong, setCurrentSong] = useState(0);
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+
+  const prevSong = () =>
+    setCurrentSong((i) => (i === 0 ? SPOTIFY_SONGS.length - 1 : i - 1));
+  const nextSong = () =>
+    setCurrentSong((i) => (i === SPOTIFY_SONGS.length - 1 ? 0 : i + 1));
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-md flex flex-col items-center gap-8">
@@ -50,39 +54,10 @@ const Index = () => {
           <p className="mt-2 text-sm text-muted-foreground">{PROFILE.bio}</p>
         </div>
 
-        {/* Divider */}
-        <div className="pixel-divider w-full animate-pixel-in" style={{ animationDelay: "0.15s" }} />
-
-        {/* Links */}
-        <div className="w-full flex flex-col gap-3">
-          {LINKS.map((link, i) => {
-            const Icon = link.icon;
-            return (
-              <a
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="animate-pixel-in pixel-link flex items-center gap-3 border-2 border-foreground bg-background px-5 py-4 text-foreground hover:bg-foreground hover:text-background"
-                style={{
-                  animationDelay: `${0.2 + i * 0.08}s`,
-                  fontFamily: "Silkscreen, monospace",
-                }}
-              >
-                <Icon size={18} strokeWidth={2.5} />
-                <span className="text-sm font-bold uppercase tracking-widest">{link.label}</span>
-              </a>
-            );
-          })}
-        </div>
-
-        {/* Divider */}
-        <div className="pixel-divider w-full animate-pixel-in" style={{ animationDelay: "0.55s" }} />
-
         {/* Social Icons */}
         <div
           className="animate-pixel-in flex items-center gap-6"
-          style={{ animationDelay: "0.6s" }}
+          style={{ animationDelay: "0.15s" }}
         >
           {SOCIALS.map((s) => {
             const Icon = s.icon;
@@ -101,10 +76,123 @@ const Index = () => {
           })}
         </div>
 
+        {/* Divider */}
+        <div className="pixel-divider w-full animate-pixel-in" style={{ animationDelay: "0.2s" }} />
+
+        {/* ── Spotify Songs ── */}
+        <div className="w-full animate-pixel-in" style={{ animationDelay: "0.25s" }}>
+          <h2
+            className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground mb-4 flex items-center gap-2"
+            style={{ fontFamily: "Silkscreen, monospace" }}
+          >
+            <Music size={14} /> now spinning
+          </h2>
+
+          <div className="border-2 border-foreground bg-background p-3">
+            {/* Song switcher controls */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={prevSong}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Previous song"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="text-center">
+                <p
+                  className="text-xs font-bold text-foreground uppercase tracking-widest"
+                  style={{ fontFamily: "Silkscreen, monospace" }}
+                >
+                  {SPOTIFY_SONGS[currentSong].title}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {SPOTIFY_SONGS[currentSong].artist}
+                </p>
+              </div>
+              <button
+                onClick={nextSong}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Next song"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            {/* Song progress dots */}
+            <div className="flex items-center justify-center gap-1.5 mb-3">
+              {SPOTIFY_SONGS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSong(i)}
+                  className={`w-2 h-2 transition-colors ${
+                    i === currentSong ? "bg-foreground" : "bg-muted"
+                  }`}
+                  aria-label={`Song ${i + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Spotify embed */}
+            <iframe
+              key={SPOTIFY_SONGS[currentSong].trackId}
+              src={`https://open.spotify.com/embed/track/${SPOTIFY_SONGS[currentSong].trackId}?utm_source=generator&theme=0`}
+              width="100%"
+              height="80"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-none"
+              style={{ borderRadius: 0 }}
+            />
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="pixel-divider w-full animate-pixel-in" style={{ animationDelay: "0.35s" }} />
+
+        {/* ── Blog Posts ── */}
+        <div className="w-full animate-pixel-in" style={{ animationDelay: "0.4s" }}>
+          <h2
+            className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground mb-4"
+            style={{ fontFamily: "Silkscreen, monospace" }}
+          >
+            ▸ blog
+          </h2>
+
+          <div className="flex flex-col gap-2">
+            {BLOG_POSTS.map((post) => (
+              <button
+                key={post.slug}
+                onClick={() =>
+                  setExpandedPost(expandedPost === post.slug ? null : post.slug)
+                }
+                className="w-full text-left border-2 border-foreground bg-background px-4 py-3 pixel-link"
+                style={{ fontFamily: "Silkscreen, monospace" }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-widest text-foreground">
+                    {post.title}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{post.date}</span>
+                </div>
+
+                {expandedPost === post.slug && (
+                  <div
+                    className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground leading-relaxed whitespace-pre-line"
+                    style={{ fontFamily: "'Space Mono', monospace" }}
+                  >
+                    {post.content}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Footer */}
         <p
-          className="animate-pixel-in text-xs text-muted-foreground tracking-widest"
-          style={{ animationDelay: "0.7s", fontFamily: "Silkscreen, monospace" }}
+          className="animate-pixel-in text-xs text-muted-foreground tracking-widest mt-4"
+          style={{ animationDelay: "0.5s", fontFamily: "Silkscreen, monospace" }}
         >
           ░░░░░░░░░░
         </p>
