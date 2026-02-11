@@ -556,7 +556,7 @@ const Index = () => {
                 key={SPOTIFY_SONGS[currentSong].trackId}
                 src={`https://open.spotify.com/embed/track/${SPOTIFY_SONGS[currentSong].trackId}?utm_source=generator&theme=0`}
                 width="100%"
-                height="152"
+                height="80"
                 frameBorder="0"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
@@ -567,14 +567,14 @@ const Index = () => {
 
           {/* Hint */}
           <p className="text-[8px] text-muted-foreground/25 font-mono tracking-[0.2em] uppercase select-none">
-            ⟲ drag to spin · tap center to play
+            {isRestricted ? '⟲ drag to spin · tap ▶ on player' : '⟲ drag to spin · tap center to play'}
           </p>
 
-          {/* Lyrics snippet — fades in when playing */}
+          {/* Lyrics snippet — fades in when playing (always visible in restricted mode) */}
           <div
             key={`lyric-${currentSong}`}
             className={`w-full max-w-[17rem] text-center transition-all duration-700 ${
-              isPlaying
+              isRestricted || isPlaying
                 ? 'opacity-100 translate-y-0'
                 : 'opacity-0 translate-y-2 pointer-events-none'
             }`}
