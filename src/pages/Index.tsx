@@ -37,7 +37,15 @@ const ENTRY_ANIMATIONS = [
 
 // ═══════════════════════════════════════════
 
+// Detect in-app browsers (Instagram, Facebook, etc.) that block Spotify embeds
+const isInAppBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Instagram|FBAN|FBAV|FB_IAB|Line\/|Twitter|Snapchat/i.test(ua);
+};
+
 const Index = () => {
+  const isRestricted = isInAppBrowser();
   const [currentSong, setCurrentSong] = useState(0);
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -83,12 +91,15 @@ const Index = () => {
 
   // ── Spotify IFrame API ──
   useEffect(() => {
+    // Don't even try loading the embed in restricted browsers
+    if (isRestricted) return;
+
     const script = document.createElement('script');
     script.src = 'https://open.spotify.com/embed/iframe-api/v1';
     script.async = true;
     document.body.appendChild(script);
 
-    // Timeout: if embed never initialises (e.g. in-app browser), mark failed
+    // Timeout: if embed never initialises, mark failed
     const failTimer = setTimeout(() => {
       if (!controllerRef.current) setEmbedReady(false);
     }, 5000);
@@ -114,12 +125,12 @@ const Index = () => {
       try { document.body.removeChild(script); } catch {}
       delete (window as any).onSpotifyIframeApiReady;
     };
-  }, []);
+  }, [isRestricted]);
 
   // ── Song change → update embed ──
   const prevSongRef = useRef(currentSong);
   useEffect(() => {
-    if (!controllerRef.current || prevSongRef.current === currentSong) return;
+    if (isRestricted || !controllerRef.current || prevSongRef.current === currentSong) return;
     const wasPlaying = isPlayingRef.current;
     prevSongRef.current = currentSong;
 
@@ -143,10 +154,22 @@ const Index = () => {
     }
   }, [currentSong]);
 
+  const openInSpotify = useCallback(() => {
+    const trackId = SPOTIFY_SONGS[currentSongRef.current].trackId;
+    // Try Spotify deep link first (opens the app), then fallback to web
+    const webUrl = `https://open.spotify.com/track/${trackId}`;
+    window.location.href = webUrl;
+  }, []);
+
   const togglePlay = useCallback(() => {
-    // Fallback: if embed never loaded (in-app browser), open in Spotify
+    // In restricted browsers (Instagram, etc.), always redirect to Spotify
+    if (isRestricted) {
+      openInSpotify();
+      return;
+    }
+    // Fallback: if embed never loaded, redirect
     if (!controllerRef.current) {
-      window.open(`https://open.spotify.com/track/${SPOTIFY_SONGS[currentSongRef.current].trackId}`, '_blank');
+      openInSpotify();
       return;
     }
     if (toggleBusyRef.current) return;
@@ -159,7 +182,7 @@ const Index = () => {
     }
     controllerRef.current.togglePlay();
     setTimeout(() => { toggleBusyRef.current = false; }, 300);
-  }, []);
+  }, [isRestricted, openInSpotify]);
 
   // ── Haptic tick sound ──
   const triggerFeedback = useCallback(() => {
@@ -498,10 +521,10 @@ const Index = () => {
 
               {/* Icon */}
               <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
-                {!embedReady && !controllerRef.current ? (
+                {isRestricted ? (
                   <>
                     <ExternalLink size={16} className="text-foreground" />
-                    <span className="text-[6px] font-bold uppercase tracking-wider text-foreground/70 mt-0.5">Open</span>
+                    <span className="text-[6px] font-bold uppercase tracking-wider text-foreground/70 mt-0.5">Spotify</span>
                   </>
                 ) : isPlaying ? (
                   <Pause size={20} className="text-foreground" fill="currentColor" />
