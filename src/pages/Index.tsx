@@ -156,15 +156,16 @@ const Index = () => {
 
   const openInSpotify = useCallback(() => {
     const trackId = SPOTIFY_SONGS[currentSongRef.current].trackId;
-    // Try Spotify deep link first (opens the app), then fallback to web
     const webUrl = `https://open.spotify.com/track/${trackId}`;
     window.location.href = webUrl;
   }, []);
 
+  const inAppEmbedRef = useRef<HTMLIFrameElement>(null);
+
   const togglePlay = useCallback(() => {
-    // In restricted browsers (Instagram, etc.), always redirect to Spotify
+    // In restricted browsers, scroll to the visible embed so user can tap Spotify's play
     if (isRestricted) {
-      openInSpotify();
+      inAppEmbedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     // Fallback: if embed never loaded, redirect
@@ -523,8 +524,8 @@ const Index = () => {
               <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
                 {isRestricted ? (
                   <>
-                    <ExternalLink size={16} className="text-foreground" />
-                    <span className="text-[6px] font-bold uppercase tracking-wider text-foreground/70 mt-0.5">Spotify</span>
+                    <Play size={18} className="text-foreground ml-0.5" fill="currentColor" />
+                    <span className="text-[5px] font-bold uppercase tracking-wider text-foreground/60 mt-0.5">tap below</span>
                   </>
                 ) : isPlaying ? (
                   <Pause size={20} className="text-foreground" fill="currentColor" />
@@ -540,10 +541,29 @@ const Index = () => {
             </button>
           </div>
 
-          {/* Hidden Spotify Embed */}
-          <div className="w-0 h-0 overflow-hidden absolute" aria-hidden="true">
-            <div ref={embedRef} />
-          </div>
+          {/* Hidden Spotify Embed (normal browsers) */}
+          {!isRestricted && (
+            <div className="w-0 h-0 overflow-hidden absolute" aria-hidden="true">
+              <div ref={embedRef} />
+            </div>
+          )}
+
+          {/* Visible Spotify Embed for in-app browsers (Instagram, etc.) */}
+          {isRestricted && (
+            <div className="w-full max-w-[17rem] rounded-xl overflow-hidden border border-foreground/10 shadow-lg">
+              <iframe
+                ref={inAppEmbedRef}
+                key={SPOTIFY_SONGS[currentSong].trackId}
+                src={`https://open.spotify.com/embed/track/${SPOTIFY_SONGS[currentSong].trackId}?utm_source=generator&theme=0`}
+                width="100%"
+                height="152"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="rounded-xl"
+              />
+            </div>
+          )}
 
           {/* Hint */}
           <p className="text-[8px] text-muted-foreground/25 font-mono tracking-[0.2em] uppercase select-none">
