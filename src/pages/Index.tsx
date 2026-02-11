@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Instagram, Twitter, Github, ChevronLeft, ChevronRight, Music } from "lucide-react";
+import { Instagram, Twitter, Github, SkipBack, SkipForward, Music, Disc3 } from "lucide-react";
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { SPOTIFY_SONGS } from "@/data/spotify-songs";
 
@@ -81,55 +81,82 @@ const Index = () => {
 
         {/* ── Spotify Songs ── */}
         <div className="w-full animate-pixel-in" style={{ animationDelay: "0.25s" }}>
-          <h2
-            className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground mb-4 flex items-center gap-2"
-            style={{ fontFamily: "Silkscreen, monospace" }}
-          >
-            <Music size={14} /> now spinning
-          </h2>
 
-          <div className="border-2 border-foreground bg-background p-3">
-            {/* Song switcher controls */}
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={prevSong}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Previous song"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="text-center">
-                <p
-                  className="text-xs font-bold text-foreground uppercase tracking-widest"
+          <div className="border-2 border-foreground bg-background overflow-hidden">
+            {/* Now playing header bar */}
+            <div className="bg-foreground text-background px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Disc3
+                  size={14}
+                  className="animate-[spin_3s_linear_infinite]"
+                />
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.2em]"
                   style={{ fontFamily: "Silkscreen, monospace" }}
                 >
-                  {SPOTIFY_SONGS[currentSong].title}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {SPOTIFY_SONGS[currentSong].artist}
-                </p>
+                  now playing
+                </span>
               </div>
-              <button
-                onClick={nextSong}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Next song"
+              <span
+                className="text-[10px] tracking-wider opacity-60"
+                style={{ fontFamily: "Silkscreen, monospace" }}
               >
-                <ChevronRight size={18} />
-              </button>
+                {String(currentSong + 1).padStart(2, "0")}/{String(SPOTIFY_SONGS.length).padStart(2, "0")}
+              </span>
             </div>
 
-            {/* Song progress dots */}
-            <div className="flex items-center justify-center gap-1.5 mb-3">
-              {SPOTIFY_SONGS.map((_, i) => (
+            {/* Song info + controls */}
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-3">
+                {/* Prev */}
                 <button
-                  key={i}
-                  onClick={() => setCurrentSong(i)}
-                  className={`w-2 h-2 transition-colors ${
-                    i === currentSong ? "bg-foreground" : "bg-muted"
-                  }`}
-                  aria-label={`Song ${i + 1}`}
-                />
-              ))}
+                  onClick={prevSong}
+                  className="text-muted-foreground hover:text-foreground transition-transform hover:scale-110 active:scale-95"
+                  aria-label="Previous song"
+                >
+                  <SkipBack size={16} fill="currentColor" />
+                </button>
+
+                {/* Track info */}
+                <div className="flex-1 min-w-0 text-center">
+                  <p
+                    className="text-sm font-bold text-foreground truncate"
+                    style={{ fontFamily: "Silkscreen, monospace" }}
+                  >
+                    {SPOTIFY_SONGS[currentSong].title}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    {SPOTIFY_SONGS[currentSong].artist}
+                  </p>
+                </div>
+
+                {/* Next */}
+                <button
+                  onClick={nextSong}
+                  className="text-muted-foreground hover:text-foreground transition-transform hover:scale-110 active:scale-95"
+                  aria-label="Next song"
+                >
+                  <SkipForward size={16} fill="currentColor" />
+                </button>
+              </div>
+
+              {/* Track selector bar */}
+              <div className="flex items-center gap-1 mt-3">
+                {SPOTIFY_SONGS.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSong(i)}
+                    className={`h-1 flex-1 transition-all duration-200 ${
+                      i === currentSong
+                        ? "bg-foreground"
+                        : i < currentSong
+                        ? "bg-muted-foreground/40"
+                        : "bg-muted"
+                    }`}
+                    aria-label={`Song ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Spotify embed */}
@@ -141,7 +168,6 @@ const Index = () => {
               frameBorder="0"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
-              className="rounded-none"
               style={{ borderRadius: 0 }}
             />
           </div>
